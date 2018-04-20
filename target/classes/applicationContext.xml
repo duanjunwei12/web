@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd">
+
+    <context:component-scan base-package="com.dmt.service,com.dmt.controller,com.dmt.entity">
+        <!-- <context:exclude-filter type="annotation" expression="org.springframework.stereotype.Controller"/>-->
+    </context:component-scan>
+    <!-- 安全管理器 1.缓存技术 2.ralm负责处理数据,可实现Realm接口，实现自己的业务逻辑-->
+    <bean id="securityManager" class="org.apache.shiro.web.mgt.DefaultWebSecurityManager">
+        <property name="cacheManager" ref="cacheManager"></property>
+        <property name="sessionMode" value="native"></property>
+        <property name="realms">
+            <list>
+                <ref bean="jdbcRealm1"></ref>
+                <ref bean="jdbcRealm2"></ref>
+            </list>
+        </property>
+    </bean>
+
+    <bean id="jdbcRealm1" class="com.dmt.shiro.shiroRealm">
+        <property name="credentialsMatcher">
+            <bean class="org.apache.shiro.authc.credential.HashedCredentialsMatcher">
+                <property name="hashAlgorithmName" value="MD5"></property>
+                <property name="hashIterations" value="1024"></property>
+            </bean>
+        </property>
+    </bean>
+    <bean id="jdbcRealm2" class="com.dmt.shiro.shiroRealm2">
+        <property name="credentialsMatcher">
+            <bean class="org.apache.shiro.authc.credential.HashedCredentialsMatcher">
+                <property name="hashAlgorithmName" value="MD5"></property>
+                <property name="hashIterations" value="1024"></property>
+            </bean>
+        </property>
+    </bean>
+    <!-- ehcache是我们使用的缓存框架 -->
+    <bean id="cacheManager" class="org.apache.shiro.cache.ehcache.EhCacheManager">
+        <property name="cacheManagerConfigFile" value="classpath:ehcache/ehcache.xml"></property>
+    </bean>
+    <!-- 管理shiro的bean的生命周期的  必须要有-->
+    <bean id="lifecycleBeanPostProcessor" class="org.apache.shiro.spring.LifecycleBeanPostProcessor"></bean>
+    <bean class="org.springframework.aop.framework.autoproxy.DefaultAdvisorAutoProxyCreator" depends-on="lifecycleBeanPostProcessor"></bean>
+    <bean class="org.apache.shiro.spring.security.interceptor.AuthorizationAttributeSourceAdvisor">
+        <property name="securityManager" ref="securityManager"></property>
+    </bean>
+    <!-- 网络方面 -->
+    <bean id="secureRemoteInvocationExecutor" class="org.apache.shiro.spring.remoting.SecureRemoteInvocationExecutor">
+        <property name="securityManager" ref="securityManager"></property>
+    </bean>
+    <!-- 配置shiroFilter：这个bean的id必须和web.xml中的filter-name保持一致 -->
+    <bean id="shiroFilter" class="org.apache.shiro.spring.web.ShiroFilterFactoryBean">
+        <property name="securityManager" ref="securityManager"></property>
+        <property name="loginUrl" value="/login.jsp"></property>
+        <property name="successUrl" value="/success.jsp"></property>
+        <!--未授权的属性 -->
+        <property name="unauthorizedUrl" value="/error.jsp"></property>
+        <!--完成shiro过滤器的具体配置 anon:未经认证可以访问的    authc:认证后可以访问的-->
+        <property name="filterChainDefinitions">
+            <value>
+                /login.jsp = anon
+                /login = anon
+                /logout = logout
+                /** = authc
+                <!--/admin.jsp = roles[admin]
+                /user.jsp = roles[user]-->
+            </value>
+        </property>
+    </bean>
+
+</beans>
